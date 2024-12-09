@@ -57,19 +57,30 @@ function uploadECG() {
 }
 
 function parseCSV(content, startDate) {
-  var lines = content.split("\n");
+  // 줄바꿈 문자 정규화
+  var lines = content.replace(/\r\n/g, '\n').split('\n');
   var ecgData = [];
   var interval = 30000 / lines.length;
 
+  // 데이터 유효성 검사 추가
   lines.forEach((line, i) => {
-    var value = parseFloat(line.trim());
-    if (!isNaN(value)) {
-      ecgData.push({
-        x: new Date(startDate.getTime() + i * interval).getTime(),
-        y: value,
-      });
+    if (line.trim() !== '') {
+      var value = parseFloat(line.trim());
+      if (!isNaN(value)) {
+        ecgData.push({
+          x: new Date(startDate.getTime() + i * interval).getTime(),
+          y: value
+        });
+      }
     }
   });
+
+  // 데이터 검증
+  if (ecgData.length === 0) {
+    console.error('유효한 ECG 데이터가 없습니다');
+    return null;
+  }
+
   return ecgData;
 }
 
