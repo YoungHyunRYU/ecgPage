@@ -3,23 +3,54 @@ function uploadECG() {
   var file = fileInput.files[0];
   var reader = new FileReader();
 
+  // 에러 처리 추가
+  reader.onerror = function (event) {
+    console.error("File reading error:", event.target.error);
+    alert("파일 읽기 오류가 발생했습니다.");
+  };
+
   reader.onload = function (e) {
-    var csvContent = e.target.result;
-    var lines = csvContent.split("\n");
-    var name = lines[0].split(",")[1].trim();
-    var birthdate = lines[1].split(",")[1].trim();
-    var recordDate = new Date(lines[2].split(",")[1].trim());
+    try {
+      var csvContent = e.target.result;
+      // UTF-8 BOM 처리
+      if (csvContent.charCodeAt(0) === 0xfeff) {
+        csvContent = csvContent.substr(1);
+      }
 
-    document.getElementById(
-      "user-info"
-    ).innerHTML = `이름: ${name} 생년월일: ${birthdate}`;
+      // 줄바꿈 문자 정규화
+      var lines = csvContent.replace(/\r\n/g, "\n").split("\n");
 
-    var ecgData = parseCSV(lines.slice(13).join("\n"), recordDate);
-    renderECGChart(ecgData, recordDate);
+      // 빈 줄 제거
+      lines = lines.filter((line) => line.trim() !== "");
+
+      var name = lines[0].split(",")[1].trim();
+      var birthdate = lines[1].split(",")[1].trim();
+      var recordDate = new Date(lines[2].split(",")[1].trim());
+
+      document.getElementById(
+        "user-info"
+      ).innerHTML = `이름: ${name} 생년월일: ${birthdate}`;
+
+      var ecgData = parseCSV(lines.slice(13).join("\n"), recordDate);
+
+      if (ecgData && ecgData.length > 0) {
+        renderECGChart(ecgData, recordDate);
+      } else {
+        throw new Error("데이터 변환 실패");
+      }
+    } catch (error) {
+      console.error("Data processing error:", error);
+      alert("데이터 처리 중 오류가 발생했습니다.");
+    }
   };
 
   if (file) {
-    reader.readAsText(file);
+    try {
+      reader.readAsText(file);
+    } catch (error) {
+      console.error("File reading error:", error);
+      alert("파일 읽기에 실패했습니다.");
+    }
   } else {
     alert("파일을 선택해주세요.");
   }
@@ -47,12 +78,10 @@ let ecgChart = null; // 전역 변수로 차트 객체 선언
 function renderECGChart(data, startDate) {
   const ctx = document.getElementById("ecgChart").getContext("2d");
 
-  // 기존 차트가 있다면 제거
   if (ecgChart instanceof Chart) {
     ecgChart.destroy();
   }
 
-  // 새로운 차트 생성
   ecgChart = new Chart(ctx, {
     type: "line",
     data: {
@@ -69,6 +98,10 @@ function renderECGChart(data, startDate) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false, // 모바일 화면 대응
+      animation: {
+        duration: 0, // 성능 개선
+      },
       scales: {
         x: {
           type: "time",
@@ -80,6 +113,9 @@ function renderECGChart(data, startDate) {
           },
           min: startDate.getTime(),
           max: startDate.getTime() + 30000,
+          ticks: {
+            maxRotation: 0, // 모바일에서 레이블 회전 방지
+          },
         },
         y: {
           beginAtZero: false,
