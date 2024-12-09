@@ -11,39 +11,52 @@ function uploadECG() {
   reader.onload = function(e) {
     try {
       var csvContent = e.target.result;
-      if (csvContent.charCodeAt(0) === 0xFEFF) {
-        csvContent = csvContent.substr(1);
-      }
+      // 디버깅을 위한 로그 추가
+      console.log('CSV 내용:', csvContent.substring(0, 100));
 
       var lines = csvContent.replace(/\r\n/g, '\n').split('\n');
-      lines = lines.filter(line => line.trim() !== '');
+      console.log('파일 라인 수:', lines.length);
 
-      var name = lines[0].split(",")[1].trim();
-      var birthdate = lines[1].split(",")[1].trim();
-      var recordDate = new Date(lines[2].split(",")[1].trim());
+      // 빈 라인 필터링
+      lines = lines.filter(line => line.trim() !== '');
+      console.log('필터링 후 라인 수:', lines.length);
+
+      // 기본 정보 추출 전 유효성 검사
+      if (lines.length < 13) {
+        throw new Error("파일 형식이 올바르지 않습니다");
+      }
+
+      var name = lines[0].split(",")[1]?.trim() || '';
+      var birthdate = lines[1].split(",")[1]?.trim() || '';
+      var recordDate = new Date(lines[2].split(",")[1]?.trim() || '');
+
+      if (!name || !birthdate || isNaN(recordDate.getTime())) {
+        throw new Error("기본 정보 형식이 올바르지 않습니다");
+      }
 
       document.getElementById("user-info").innerHTML = 
         `이름: ${name} 생년월일: ${birthdate}`;
 
       var ecgData = parseCSV(lines.slice(13).join("\n"), recordDate);
-      console.log('처리된 데이터:', ecgData); // 디버깅용
-
-      if (ecgData && ecgData.length > 0) {
-        renderECGChart(ecgData, recordDate);
-      } else {
-        throw new Error("데이터 변환 실패");
+      
+      if (!ecgData || ecgData.length === 0) {
+        throw new Error("ECG 데이터를 추출할 수 없습니다");
       }
+
+      console.log('처리된 ECG 데이터 포인트:', ecgData.length);
+      renderECGChart(ecgData, recordDate);
+
     } catch (error) {
-      console.error("Data processing error:", error);
-      alert("데이터 처리 중 오류가 발생했습니다.");
+      console.error("상세 오류 정보:", error);
+      alert(`데이터 처리 중 오류가 발생했습니다: ${error.message}`);
     }
   };
 
   if (file) {
     try {
-      reader.readAsText(file);
+      reader.readAsText(file, 'UTF-8');
     } catch (error) {
-      console.error("File reading error:", error);
+      console.error("파일 읽기 오류:", error);
       alert("파일 읽기에 실패했습니다.");
     }
   } else {
