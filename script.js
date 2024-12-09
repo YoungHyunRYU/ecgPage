@@ -42,7 +42,7 @@ function parseCSV(content, startDate) {
   return ecgData;
 }
 
-let ecgChart = null; // 전역 변수로 차트 객체 선언
+let ecgChart = null; 
 
 function renderECGChart(data, startDate) {
   const ctx = document.getElementById("ecgChart").getContext("2d");
