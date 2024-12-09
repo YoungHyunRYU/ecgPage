@@ -3,35 +3,30 @@ function uploadECG() {
   var file = fileInput.files[0];
   var reader = new FileReader();
 
-  // 에러 처리 추가
-  reader.onerror = function (event) {
+  reader.onerror = function(event) {
     console.error("File reading error:", event.target.error);
     alert("파일 읽기 오류가 발생했습니다.");
   };
 
-  reader.onload = function (e) {
+  reader.onload = function(e) {
     try {
       var csvContent = e.target.result;
-      // UTF-8 BOM 처리
-      if (csvContent.charCodeAt(0) === 0xfeff) {
+      if (csvContent.charCodeAt(0) === 0xFEFF) {
         csvContent = csvContent.substr(1);
       }
 
-      // 줄바꿈 문자 정규화
-      var lines = csvContent.replace(/\r\n/g, "\n").split("\n");
-
-      // 빈 줄 제거
-      lines = lines.filter((line) => line.trim() !== "");
+      var lines = csvContent.replace(/\r\n/g, '\n').split('\n');
+      lines = lines.filter(line => line.trim() !== '');
 
       var name = lines[0].split(",")[1].trim();
       var birthdate = lines[1].split(",")[1].trim();
       var recordDate = new Date(lines[2].split(",")[1].trim());
 
-      document.getElementById(
-        "user-info"
-      ).innerHTML = `이름: ${name} 생년월일: ${birthdate}`;
+      document.getElementById("user-info").innerHTML = 
+        `이름: ${name} 생년월일: ${birthdate}`;
 
       var ecgData = parseCSV(lines.slice(13).join("\n"), recordDate);
+      console.log('처리된 데이터:', ecgData); // 디버깅용
 
       if (ecgData && ecgData.length > 0) {
         renderECGChart(ecgData, recordDate);
@@ -57,12 +52,12 @@ function uploadECG() {
 }
 
 function parseCSV(content, startDate) {
-  // 줄바꿈 문자 정규화
   var lines = content.replace(/\r\n/g, '\n').split('\n');
   var ecgData = [];
   var interval = 30000 / lines.length;
 
-  // 데이터 유효성 검사 추가
+  console.log('데이터 라인 수:', lines.length);
+
   lines.forEach((line, i) => {
     if (line.trim() !== '') {
       var value = parseFloat(line.trim());
@@ -75,63 +70,68 @@ function parseCSV(content, startDate) {
     }
   });
 
-  // 데이터 검증
-  if (ecgData.length === 0) {
-    console.error('유효한 ECG 데이터가 없습니다');
-    return null;
-  }
-
+  console.log('처리된 데이터 수:', ecgData.length);
   return ecgData;
 }
 
-let ecgChart = null; // 전역 변수로 차트 객체 선언
-
 function renderECGChart(data, startDate) {
-  const ctx = document.getElementById("ecgChart").getContext("2d");
-
-  if (ecgChart instanceof Chart) {
-    ecgChart.destroy();
+  const canvas = document.getElementById("ecgChart");
+  const ctx = canvas.getContext("2d");
+  
+  canvas.width = canvas.offsetWidth;
+  canvas.height = 400;
+  
+  if (window.ecgChart) {
+    window.ecgChart.destroy();
+    window.ecgChart = null;
   }
-
-  ecgChart = new Chart(ctx, {
+  
+  window.ecgChart = new Chart(ctx, {
     type: "line",
     data: {
-      datasets: [
-        {
-          label: "ECG Data",
-          data: data,
-          borderColor: "rgb(75, 192, 192)",
-          borderWidth: 1,
-          fill: false,
-          pointRadius: 0,
-        },
-      ],
+      datasets: [{
+        label: "ECG Data",
+        data: data,
+        borderColor: "rgb(75, 192, 192)",
+        borderWidth: 1,
+        fill: false,
+        pointRadius: 0,
+        tension: 0
+      }]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: false, // 모바일 화면 대응
-      animation: {
-        duration: 0, // 성능 개선
+      maintainAspectRatio: false,
+      devicePixelRatio: window.devicePixelRatio,
+      animation: false,
+      plugins: {
+        legend: {
+          display: true
+        }
       },
       scales: {
         x: {
           type: "time",
+          display: true,
           time: {
             unit: "second",
             displayFormats: {
-              second: "HH:mm:ss",
-            },
+              second: "HH:mm:ss"
+            }
           },
           min: startDate.getTime(),
           max: startDate.getTime() + 30000,
-          ticks: {
-            maxRotation: 0, // 모바일에서 레이블 회전 방지
-          },
+          grid: {
+            display: true
+          }
         },
         y: {
           beginAtZero: false,
-        },
-      },
-    },
+          grid: {
+            display: true
+          }
+        }
+      }
+    }
   });
 }
