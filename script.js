@@ -10,29 +10,30 @@ function uploadECG() {
 
   reader.onload = function(e) {
     try {
-      var csvContent = e.target.result;
-      // 디버깅을 위한 로그 추가
-      console.log('CSV 내용:', csvContent.substring(0, 100));
+        var csvContent = e.target.result;
+        var lines = csvContent.split('\n').map(line => line.trim()).filter(line => line);
+        
+        // CSV 파일 구조 검증
+        if (lines.length < 3) {
+            throw new Error("CSV 파일 형식이 올바르지 않습니다");
+        }
 
-      var lines = csvContent.replace(/\r\n/g, '\n').split('\n');
-      console.log('파일 라인 수:', lines.length);
+        // 각 라인이 콤마(,)를 포함하는지 확인
+        var nameInfo = lines[0].split(",");
+        var birthdateInfo = lines[1].split(",");
+        var recordDateInfo = lines[2].split(",");
 
-      // 빈 라인 필터링
-      lines = lines.filter(line => line.trim() !== '');
-      console.log('필터링 후 라인 수:', lines.length);
+        if (nameInfo.length < 2 || birthdateInfo.length < 2 || recordDateInfo.length < 2) {
+            throw new Error("CSV 파일의 기본 정보 형식이 올바르지 않습니다");
+        }
 
-      // 기본 정보 추출 전 유효성 검사
-      if (lines.length < 13) {
-        throw new Error("파일 형식이 올바르지 않습니다");
-      }
+        var name = nameInfo[1].trim();
+        var birthdate = birthdateInfo[1].trim();
+        var recordDate = new Date(recordDateInfo[1].trim());
 
-      var name = lines[0].split(",")[1]?.trim() || '';
-      var birthdate = lines[1].split(",")[1]?.trim() || '';
-      var recordDate = new Date(lines[2].split(",")[1]?.trim() || '');
-
-      if (!name || !birthdate || isNaN(recordDate.getTime())) {
-        throw new Error("기본 정보 형식이 올바르지 않습니다");
-      }
+        if (!name || !birthdate || isNaN(recordDate.getTime())) {
+            throw new Error("기본 정보가 유효하지 않습니다");
+        }
 
       document.getElementById("user-info").innerHTML = 
         `이름: ${name} 생년월일: ${birthdate}`;
@@ -47,10 +48,10 @@ function uploadECG() {
       renderECGChart(ecgData, recordDate);
 
     } catch (error) {
-      console.error("상세 오류 정보:", error);
-      alert(`데이터 처리 중 오류가 발생했습니다: ${error.message}`);
+        console.error("상세 오류 정보:", error);
+        alert(`데이터 처리 중 오류가 발생했습니다: ${error.message}`);
     }
-  };
+};
 
   if (file) {
     try {
