@@ -87,19 +87,23 @@ function parseCSV(content, startDate) {
   console.log('처리된 데이터 수:', ecgData.length);
   return ecgData;
 }
+let ecgChart = null;
 
 function renderECGChart(data, startDate) {
   const canvas = document.getElementById("ecgChart");
   const ctx = canvas.getContext("2d");
   
+  // 캔버스 크기 설정
   canvas.width = canvas.offsetWidth;
   canvas.height = 400;
   
+  // 기존 차트 제거
   if (window.ecgChart) {
     window.ecgChart.destroy();
     window.ecgChart = null;
   }
-  
+
+  // 새로운 차트 생성
   window.ecgChart = new Chart(ctx, {
     type: "line",
     data: {
@@ -109,24 +113,16 @@ function renderECGChart(data, startDate) {
         borderColor: "rgb(75, 192, 192)",
         borderWidth: 1,
         fill: false,
-        pointRadius: 0,
-        tension: 0
+        pointRadius: 0
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      devicePixelRatio: window.devicePixelRatio,
       animation: false,
-      plugins: {
-        legend: {
-          display: true
-        }
-      },
       scales: {
         x: {
           type: "time",
-          display: true,
           time: {
             unit: "second",
             displayFormats: {
@@ -134,16 +130,10 @@ function renderECGChart(data, startDate) {
             }
           },
           min: startDate.getTime(),
-          max: startDate.getTime() + 30000,
-          grid: {
-            display: true
-          }
+          max: startDate.getTime() + 30000
         },
         y: {
-          beginAtZero: false,
-          grid: {
-            display: true
-          }
+          beginAtZero: false
         }
       }
     }
